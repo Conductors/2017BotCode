@@ -56,18 +56,25 @@ public:
 		chooser.AddDefault(autoNameDefault, autoNameDefault);
 		chooser.AddObject(autoNameCustom, autoNameCustom);
 		frc::SmartDashboard::PutData("Auto Modes", &chooser);
+		//Sets Talon SRX CAN IDs
 		leftFront = new CANTalon { 2 };
 		leftRear =  new CANTalon { 3 };
 		rightFront = new CANTalon { 4 };
 		rightRear = new CANTalon { 5 };
+		//Initiates robot with the 4 Talons
 		myRobot = new RobotDrive {leftFront, leftRear, rightFront, rightRear};
+		//Initiates joysticks
 		stick = new Joystick { 0 };
 		stick2 = new Joystick { 1 };
+		//Adds NavX (The large one)
 		navX = new AHRS { SPI::Port::kMXP };
 		navX->Reset();
+		//Adds encoders
 		leftEncode = new Encoder { 2, 3, false, Encoder::EncodingType::k4X};
 		rightEncode = new Encoder { 0, 1, false, Encoder::EncodingType::k4X};
+		//Encoder compensation to balance out the two sides (One will always go faster)
 		encoderCompensation = 0.94224842556;
+		//Starts camera server
 		camera->GetInstance();
 		camera->StartAutomaticCapture();
 	}
@@ -91,16 +98,23 @@ public:
 		if (autoSelected == autoNameCustom) {
 			// Custom Auto goes here
 		} else {
+			//Resets all encoder values (so that if teleop was used previously
+			//it won't mess with distance
 			leftEncode->Reset();
 			rightEncode->Reset();
+			//Calculates distance per pulse using wheel diameter * Pi / pulse count (270)
 			encodeDistance = 7.4 * M_PI / 270;
 			leftEncode->SetDistancePerPulse(encodeDistance);
 			rightEncode->SetDistancePerPulse(encodeDistance);
+			//Sets minimum wheel rotation rate before it's considered stopped
 			leftEncode->SetMinRate(.5);
 			rightEncode->SetMinRate(.5);
+			//Robot drives number of inches forward (remember to subtract length of robot)
 			/* while (abs(rightEncode->GetDistance()) <= 27) {
 				myRobot->TankDrive(-1, -1);
 			} */
+			//Rotates bot until it's 180 degrees. About 15 degrees per loop, so subtract that.
+			navX->Reset();
 			while (abs(navX->GetAngle()) < 165) {
 				SmartDashboard::PutNumber("Angle",navX->GetAngle());
 				myRobot->TankDrive(.6,-.6);
@@ -122,6 +136,7 @@ public:
 	}
 
 	void TeleopPeriodic() {
+		//Updates all joystick values
 		joystick1_1 = stick->GetRawButton(1);
 		joystick2_1 = stick->GetRawButton(2);
 		joystick3_1 = stick->GetRawButton(3);
@@ -142,6 +157,7 @@ public:
 		joystickY_2 = stick2->GetRawAxis(1);
 		joystickX_1 = stick->GetRawAxis(0);
 		joystickX_2 = stick2->GetRawAxis(0);
+		//Need interlock to avoid rapid button switching
 		if (joystick3_2 && interlock) {
 			slowBool = true;
 			interlock = false;
