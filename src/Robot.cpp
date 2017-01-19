@@ -62,6 +62,7 @@ public:
 		rightRear = new CANTalon { 5 };
 		myRobot = new RobotDrive {leftFront, leftRear, rightFront, rightRear};
 		stick = new Joystick { 0 };
+		stick2 = new Joystick { 1 };
 		navX = new AHRS { SPI::Port::kMXP };
 		navX->Reset();
 		leftEncode = new Encoder { 2, 3, false, Encoder::EncodingType::k4X};
@@ -90,7 +91,6 @@ public:
 		if (autoSelected == autoNameCustom) {
 			// Custom Auto goes here
 		} else {
-			// Default Auto goes here
 			leftEncode->Reset();
 			rightEncode->Reset();
 			encodeDistance = 7.4 * M_PI / 270;
@@ -98,9 +98,9 @@ public:
 			rightEncode->SetDistancePerPulse(encodeDistance);
 			leftEncode->SetMinRate(.5);
 			rightEncode->SetMinRate(.5);
-			while (abs(rightEncode->GetDistance()) <= 27) {
+			/* while (abs(rightEncode->GetDistance()) <= 27) {
 				myRobot->TankDrive(-1, -1);
-			}
+			} */
 			while (abs(navX->GetAngle()) < 165) {
 				SmartDashboard::PutNumber("Angle",navX->GetAngle());
 				myRobot->TankDrive(.6,-.6);
@@ -142,11 +142,11 @@ public:
 		joystickY_2 = stick2->GetRawAxis(1);
 		joystickX_1 = stick->GetRawAxis(0);
 		joystickX_2 = stick2->GetRawAxis(0);
-		if (joystick3_1 && interlock) {
+		if (joystick3_2 && interlock) {
 			slowBool = true;
 			interlock = false;
 		}
-		if (!joystick3_1) {
+		if (!joystick3_2) {
 			interlock = true;
 		}
 		if (slowBool) {
