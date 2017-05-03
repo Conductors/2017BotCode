@@ -15,10 +15,6 @@
 #include <SmartDashboard/SmartDashboard.h>
 #include <DigitalInput.h>
 #include <I2C.h>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/core/core.hpp>
-#include <opencv2/core/types.hpp>
-#include <thread>
 class Robot: public frc::IterativeRobot {
 CANTalon* leftTop;
 CANTalon* leftBottom;
@@ -27,6 +23,7 @@ CANTalon* rightBottom;
 CANTalon* intake;
 CANTalon* shooter;
 CANTalon* climber;
+CANTalon* climber2;
 CANTalon* agitator;
 CANTalon* unassigned;
 RobotDrive *myRobot;
@@ -43,6 +40,14 @@ bool joystick5_1;
 bool joystick6_1;
 bool joystick7_1;
 bool joystick8_1;
+bool joystick9_1;
+bool joystick10_1;
+bool joystick11_1;
+bool joystick12_1;
+bool joystick13_1;
+bool joystick14_1;
+bool joystick15_1;
+bool joystick16_1;
 bool joystick1_2;
 bool joystick2_2;
 bool joystick3_2;
@@ -127,6 +132,7 @@ public:
 		chooser.AddObject(shootLeft,shootLeft);
 		chooser.AddObject(gearPassive,gearPassive);
 		chooser.AddObject(autoTest,autoTest);
+		chooser.AddObject(driveForward,driveForward);
 		frc::SmartDashboard::PutData("Auto Modes", &chooser);
 		//Sets Talon SRX CAN IDs
 		leftTop = new CANTalon { 6 };
@@ -136,12 +142,12 @@ public:
 		intake = new CANTalon { 3 };
 		shooter = new CANTalon { 4 };
 		climber = new CANTalon { 7 };
+		climber2 = new CANTalon { 11 };
 		//Initiates robot with the 4 Talons
 		myRobot = new RobotDrive { leftTop, leftBottom, rightTop, rightBottom };
 		//Initiates joysticks
 		stick = new Joystick { 1 };
 		stick2 = new Joystick { 0 };
-		unassigned = new CANTalon { 11 };
 		agitator = new CANTalon { 10 };
 		//Adds NavX (The large one)
 		navX = new AHRS { SPI::Port::kMXP };
@@ -349,7 +355,7 @@ public:
 					}
 				}
 			}
-			else if (autoSelected == autoLeft) {
+			else if (autoSelected == driveForward) {
 				switch(autoCounter) {
 							case 0: {
 								SmartDashboard::PutNumber("Encoder: ", abs(leftEncode->GetDistance()));
@@ -365,31 +371,47 @@ public:
 								}
 							}
 							case 1: break;
-							/* case 1: {
-								SmartDashboard::PutNumber("Angle: ", navX->GetAngle());
-								if (abs(navX->GetAngle()) > 42) {
-									myRobot->TankDrive(.0,.0);
-									autoCounter++;
-									break;
-								} else {
-									myRobot->TankDrive(.4,-.4);
-									break;
-								}
-							}
-							case 2: {
-								if (abs(leftEncode->GetDistance()) > 15) {
-									myRobot->TankDrive(.0,.0);
-									autoCounter++;
-									break;
-								} else {
-									myRobot->TankDrive(-.6,-.6);
-									break;
-								}
-							}
-							case 3: break; */
 						}
 			}
-
+				else if (autoSelected == autoLeft) {
+					switch(autoCounter) {
+						case 0: {
+							SmartDashboard::PutNumber("Encoder: ", abs(leftEncode->GetDistance()));
+							if (abs(leftEncode->GetDistance()) > 118) {
+								myRobot->TankDrive(.0,.0);
+								autoCounter++;
+								leftEncode->Reset();
+								leftEncode->SetDistancePerPulse(encodeDistance);
+								break;
+							} else {
+								myRobot->TankDrive(.6,.6);
+								break;
+							}
+						}
+						case 1: {
+							SmartDashboard::PutNumber("Angle: ", navX->GetAngle());
+							if (abs(navX->GetAngle()) > 42) {
+								myRobot->TankDrive(.0,.0);
+								autoCounter++;
+								break;
+							} else {
+								myRobot->TankDrive(.4,-.4);
+								break;
+							}
+						}
+						case 2: {
+							if (abs(leftEncode->GetDistance()) > 15) {
+								myRobot->TankDrive(.0,.0);
+								autoCounter++;
+								break;
+							} else {
+								myRobot->TankDrive(-.6,-.6);
+								break;
+							}
+						}
+						case 3: break;
+					}
+				}
 	}
 	void TeleopInit() {
 		directBool = true;
@@ -424,6 +446,14 @@ public:
 			joystick6_1 = stick->GetRawButton(6);
 			joystick7_1 = stick->GetRawButton(7);
 			joystick8_1 = stick->GetRawButton(8);
+			joystick9_1 = stick->GetRawButton(9);
+			joystick10_1 = stick->GetRawButton(10);
+			joystick11_1 = stick->GetRawButton(11);
+			joystick12_1 = stick->GetRawButton(12);
+			joystick13_1 = stick->GetRawButton(13);
+			joystick14_1 = stick2->GetRawButton(14);
+			joystick15_1 = stick2->GetRawButton(15);
+			joystick16_1 = stick2->GetRawButton(16);
 			joystick1_2 = stick2->GetRawButton(1);
 			joystick2_2 = stick2->GetRawButton(2);
 			joystick3_2 = stick2->GetRawButton(3);
@@ -445,13 +475,15 @@ public:
 			joystick2_3 = stick3->GetRawButton(2);
 			joystick5_3 = stick3->GetRawButton(5);
 			//Need interlock to avoid rapid button switching
-			if (joystickLT_3 > 0) {
+			//Agitator
+			if (joystick15_1 > 0) {
 				agitator->Set(-1);
 			}
 			else {
 				agitator->Set(0);
 			}
-			if (joystick1_3) {
+			//Shooter
+			if (joystick14_1) {
 				shooter->Set(.64);
 			}
 			else {
@@ -460,6 +492,7 @@ public:
 			if (!joystick1_3) {
 				joystick1_3_Inter = true;
 			}
+			//Shifter
 			if (joystick3_2 && joystick3_2_Inter) {
 				shifting->Set(shifting->kForward);
 				joystick3_2_Inter = false;
@@ -474,41 +507,29 @@ public:
 			if (!joystick4_2) {
 				joystick4_2_Inter = true;
 			}
-			if (joystick5_3 && gear->Get() == DoubleSolenoid::kForward) {
+			//Gear Ejector
+			if (joystick1_2 && gear->Get() == DoubleSolenoid::kForward) {
 				gearEject->Set(DoubleSolenoid::kForward);
 			}
 			else {
 				gearEject->Set(DoubleSolenoid::kReverse);
 			}
-			if (joystick3_3 && joystick3_3_Inter) {
+			//Gear lift
+			if (joystick4_1) {
 				gear->Set(DoubleSolenoid::kReverse);
 				ejectBool = false;
-				joystick3_3_Inter = false;
 			}
-			if (!joystick3_3) {
-				joystick3_3_Inter = true;
-			}
-			if (joystick4_3 && joystick4_3_Inter) {
+			if (joystick3_1) {
 				gear->Set(DoubleSolenoid::kForward);
 				ejectBool = true;
-				joystick4_3_Inter = false;
-			}
-			if (!joystick4_3) {
-				joystick4_3_Inter = true;
 			}
 			if (!joystick5_1) {
 				joystick5_1_Inter = true;
 			}
+			//Flips directions
 			if (joystick2_2 && joystick2_2_Inter) {
 				directBool = !directBool;
 				joystick2_2_Inter = false;
-			}
-			if (joystick2_1 && joystick2_2_Inter) {
-				joystick2_1_Inter = false;
-				leftEncode->Reset();
-				while (abs(leftEncode->GetDistance()) < 8) {
-					myRobot->TankDrive(-.6,-.6);
-				}
 			}
 			if (!joystick2_1) {
 				joystick2_1_Inter = true;
@@ -516,15 +537,23 @@ public:
 			if (!joystick2_2) {
 				joystick2_2_Inter = true;
 			}
-			if (joystick2_3) {
-				climber->Set(.80);
+			//Climber
+			if (joystick1_1) {
+				climber->Set(-1);
+				climber2->Set(-1);
 			}
-			if (!joystick2_3) {
+			else if (joystick2_1){
+				climber->Set(-.4);
+				climber2->Set(-.4);
+			}
+			else {
 				climber->Set(0);
+				climber2->Set(0);
 			}
 			if (!joystick8_2) {
 				joystick8_2_Inter = true;
 			}
+			//Direction flipping
 			if (directBool) {
 				joyLeftValue = joystickY_1 * -1;
 				joyRightValue = joystickY_2 * -1;
@@ -532,23 +561,22 @@ public:
 				joyLeftValue =  joystickY_2;
 				joyRightValue = joystickY_1;
 			}
-			if (joystickRT_3 > 0) {
+			//Intake
+			if (joystick16_1) {
 				intake->Set(-.65);
 			}
-			else if (joystick6_3) {
+			/*else if (joystick4_2) {
 				intake->Set(.65);
-			}
+			} */
 			else {
 				intake->Set(0);
 			}
-
 			myRobot->TankDrive(joyLeftValue, joyRightValue, true);
 		}
 	}
 
 	void TestPeriodic() {
 		lw->Run();
-
 	}
 
 private:
@@ -562,6 +590,7 @@ private:
 	const std::string driveForward = "Drive Forward";
 	const std::string gearPassive = "Passive Gear";
 	const std::string autoTest = "Test Auto";
+	const std::string autoBase = "Base line";
 	std::string autoSelected;
 };
 START_ROBOT_CLASS(Robot)
